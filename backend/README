@@ -1,0 +1,1 @@
+The backend is the part which handles the demodulation. The backend lives in userspace, and communicates with the frontend via a loopback socket.
