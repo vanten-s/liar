@@ -12,7 +12,7 @@ def mainloop():
 
     with AudioOpener() as stream:
         audio = stream.read()
-        print(demodulate(audio).decode('utf-8'))
+        print(demodulate(audio).decode('utf-8', errors='ignore'))
 
 if __name__ == "__main__":
     mainloop()
