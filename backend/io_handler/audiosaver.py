@@ -1,4 +1,4 @@
-from io_handler.audiooutput import AudioOutput
+from .audiooutput import AudioOutput
 import numpy as np
 import wave
 import itertools
