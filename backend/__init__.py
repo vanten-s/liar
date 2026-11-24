@@ -27,7 +27,7 @@ def raw2float(audio: bytes) -> np.ndarray:
 def float2raw(audio: np.ndarray) -> bytes:
     raw = []
     for sample in audio:
-        raw.extend(round(2**31 * sample).to_bytes(4, 'little', signed=True))
+        raw.extend(round(0.9 * 2**31 * sample).to_bytes(4, 'little', signed=True))
 
     return bytes(raw)
 
@@ -54,22 +54,15 @@ def modulation_loop(stream: pyaudio.Stream):
         stream.write(float2raw(modulated))
 
 def demodulation_loop(stream: pyaudio.Stream):
-    previous_chunk = np.zeros(CHUNK)
+    previous_chunk = np.zeros(CHUNK//2)
     while running:
-        chunk = raw2float(stream.read(CHUNK))
+        chunk = raw2float(stream.read(CHUNK//2))
 
-        middle = previous_chunk[CHUNK//2:]
-        start = chunk[:CHUNK//2]
+        shift, amplitude = is_sync_signal(np.concat((previous_chunk, chunk)))
 
-        shift_overlap, amplitude_overlap = is_sync_signal(np.concatenate((middle, start)))
-        shift, amplitude = is_sync_signal(chunk)
+        previous_chunk = chunk
 
-        if amplitude_overlap > amplitude:
-            amplitude = amplitude_overlap
-            shift = shift_overlap
-            print("Overlap")
-
-        if amplitude > 10:
+        if amplitude > 6: 
             with AudioSaver("sync.wav") as s:
                 s.write(chunk)
 
@@ -86,7 +79,6 @@ def demodulation_loop(stream: pyaudio.Stream):
             s.write(chunk)
 
         length = demodulate(chunk)[0]
-        print(length)
 
         if length == 0: continue
 
@@ -97,5 +89,5 @@ def demodulation_loop(stream: pyaudio.Stream):
 
         message = demodulate(chunk)
         demod_queue.put(message)
-        print(message)
+        print(message.decode('utf-8', errors='ignore'))
 
