@@ -1,12 +1,12 @@
 from .io_handler import AudioSaver, AudioOpener
-from .modem import demodulate, modulate, is_sync_signal
+from .modem import demodulate, modulate, is_sync_signal, create_sync_signal
 from .modem import SAMPLES_PER_SYMBOL
 from queue import Queue
 import numpy as np
 import threading
 import pyaudio
 
-CHUNK = 4 * SAMPLES_PER_SYMBOL
+CHUNK = len(create_sync_signal())
 running = True
 receiving = False
 
@@ -62,7 +62,7 @@ def demodulation_loop(stream: pyaudio.Stream):
 
         previous_chunk = chunk
 
-        if amplitude > 4: 
+        if amplitude > 3: 
             print(average)
             print("start_recv")
             with AudioSaver("sync.wav") as s:
@@ -75,9 +75,9 @@ def demodulation_loop(stream: pyaudio.Stream):
         else:
             continue
 
-        chunk = raw2float(stream.read(CHUNK))
+        chunk = raw2float(stream.read(4 * SAMPLES_PER_SYMBOL))
 
-        with AudioSaver("testAudio.wav") as s:
+        with AudioSaver("length.wav") as s:
             s.write(chunk)
 
         length = demodulate(chunk)[0]
