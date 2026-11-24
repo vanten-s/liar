@@ -82,13 +82,13 @@ def demodulate(audio: np.ndarray) -> bytes:
 def is_sync_signal(audio: np.ndarray) -> tuple[int, float, float]:
     sync_signal = np.flip(create_sync_signal())
     
-    amplitude = np.sqrt(np.sum(audio * audio))
+    amplitude = np.sqrt(np.sum(audio * audio)) + 0.1
 
     convolved = scipy.signal.convolve(audio, sync_signal)
     max_index = np.argmax(np.sqrt(abs(convolved)))
 
-    if amplitude > 0:
-        max_value = convolved[max_index]
+    if amplitude > 1:
+        max_value = convolved[max_index] / amplitude
 
     else:
         max_value = 0

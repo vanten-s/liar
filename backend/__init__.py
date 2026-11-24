@@ -63,7 +63,7 @@ def demodulation_loop(stream: pyaudio.Stream):
         previous_chunk = chunk
 
         if amplitude > 3: 
-            print(average)
+            print(amplitude)
             print("start_recv")
             with AudioSaver("sync.wav") as s:
                 s.write(chunk)
@@ -95,4 +95,6 @@ def demodulation_loop(stream: pyaudio.Stream):
         demod_queue.put(message)
         print(message.decode('utf-8', errors='ignore'))
         print("Listening...")
+
+        previous_chunk = raw2float(stream.read(CHUNK//2))
 
