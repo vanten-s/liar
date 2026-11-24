@@ -1,8 +1,9 @@
 from abc import abstractmethod
+from typing import Self
 
 class AudioInput:
     @abstractmethod
-    def __enter__(self) -> AudioInput:
+    def __enter__(self) -> Self:
         pass
 
     @abstractmethod

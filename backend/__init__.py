@@ -67,12 +67,9 @@ def demodulation_loop(stream: pyaudio.Stream):
         if amplitude_overlap > amplitude:
             amplitude = amplitude_overlap
             shift = shift_overlap
-            overlap = True
-            print("overlap!")
+            print("Overlap")
 
-        if amplitude > 3:
-            print("Sync")
-            print(shift, shift_overlap)
+        if amplitude > 10:
 
             with AudioSaver("sync.wav") as s:
                 s.write(chunk)
@@ -80,7 +77,6 @@ def demodulation_loop(stream: pyaudio.Stream):
             test = stream.read(shift) # Read enough bytes to receive the last of the message
             with AudioSaver("empty.wav") as s:
                 s.write(raw2float(test))
-
 
         else:
             continue
@@ -91,13 +87,15 @@ def demodulation_loop(stream: pyaudio.Stream):
             s.write(chunk)
 
         length = demodulate(chunk)[0]
-        print(length)
 
-        chunk = raw2float(stream.read(CHUNK) * length)
+        if length == 0: continue
+
+        chunk = raw2float(stream.read(CHUNK * length))
 
         with AudioSaver("dataAudio.wav") as s:
             s.write(chunk)
 
         message = demodulate(chunk)
+        demod_queue.put(message)
         print(message)
 

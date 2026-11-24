@@ -1,9 +1,10 @@
 from abc import abstractmethod
+from typing import Self
 import numpy as np
 
 class AudioOutput:
     @abstractmethod
-    def __enter__(self) -> AudioOutput:
+    def __enter__(self) -> Self:
         pass
 
     @abstractmethod

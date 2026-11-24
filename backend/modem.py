@@ -1,3 +1,5 @@
+from os import wait
+
 import numpy as np
 import scipy.signal
 import scipy.fft
@@ -24,8 +26,6 @@ def create_sync_signal() -> np.ndarray:
 def modulate(data_bytes: bytes) -> np.ndarray:
     data = np.array(list(data_bytes), dtype=np.uint8) 
     data = np.concat((np.array([len(data_bytes)], dtype=np.uint8), data))
-
-    print(data)
 
     length: int = data.shape[0] * 4
 
@@ -68,13 +68,11 @@ def demodulate(audio: np.ndarray) -> bytes:
 
         if symbol < 0 or symbol > 3:
             current_bit += 2
-            print(current_bit // 8)
             continue
 
         data[current_bit // 8] |= (symbol << (current_bit % 8))
         current_bit += 2
 
-    print(data)
     return bytes(data)
 
 def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
@@ -92,10 +90,6 @@ def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
     max_value = convolved[max_index]
 
     shift = max_index - len(sync_signal)
-
-    if max_value > 1:
-        print(max_value)
-        print(f"calculated shift: {shift}")
 
     if shift < 0:
         shift = 0
