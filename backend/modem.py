@@ -5,10 +5,11 @@ import scipy.signal
 from .io_handler.audiosaver import AudioSaver
 
 SAMPLE_RATE = 48000 # Samples per secondmode
-BAUD_RATE = 100 # Symbols per second
+BAUD_RATE = 300 # Symbols per second
+FREQUENCY_SHIFT =  4
 SAMPLES_PER_SYMBOL = SAMPLE_RATE // BAUD_RATE # Samples per Symbol
 
-FREQUENCIES = (BAUD_RATE, 2 * BAUD_RATE, 3 * BAUD_RATE, 4 * BAUD_RATE)
+FREQUENCIES = ((0 + FREQUENCY_SHIFT) * BAUD_RATE, (1 + FREQUENCY_SHIFT) * BAUD_RATE, (2 + FREQUENCY_SHIFT) * BAUD_RATE, (3 + FREQUENCY_SHIFT) * BAUD_RATE)
 
 # One "sync" symbols, then three symbol silence
 def create_sync_signal() -> np.ndarray:
@@ -60,7 +61,7 @@ def demodulate(audio: np.ndarray) -> bytes:
     data = []
     current_bit = 0
     for i in range(0, Sx.shape[1]):
-        symbol = np.argmax(abs(Sx[...,i])) - 1
+        symbol = np.argmax(abs(Sx[...,i])) - FREQUENCY_SHIFT
         
         if current_bit % 8 == 0:
             data.append(0)
@@ -74,7 +75,7 @@ def demodulate(audio: np.ndarray) -> bytes:
 
     return bytes(data)
 
-def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
+def is_sync_signal(audio: np.ndarray) -> tuple[int, float, float]:
     sync_signal = np.flip(create_sync_signal())
     
     amplitude = np.sqrt(np.sum(audio * audio))
@@ -83,7 +84,7 @@ def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
     max_index = np.argmax(np.sqrt(abs(convolved)))
 
     if amplitude > 0:
-        max_value = convolved[max_index] / amplitude
+        max_value = convolved[max_index]
 
     else:
         max_value = 0
@@ -93,5 +94,5 @@ def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
     if shift < 0:
         shift = 0
 
-    return (int(shift), max_value)
+    return (int(shift), max_value, amplitude)
 
