@@ -1,14 +1,14 @@
-from io_handler.audiooutput import AudioOutput
+from .audiooutput import AudioOutput
 import numpy as np
 import wave
 import itertools
 
 class AudioSaver(AudioOutput):
-    def __init__(self):
-        pass
+    def __init__(self, name: str):
+        self.name = name
 
     def __enter__(self):
-        self.wf = wave.open("audio.wav", mode="wb")
+        self.wf = wave.open(self.name, mode="wb")
         self.wf.setnchannels(1)
         self.wf.setframerate(48000)
         self.wf.setsampwidth(4)

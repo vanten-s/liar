@@ -1,4 +1,4 @@
-from io_handler.audioinput import AudioInput
+from .audioinput import AudioInput
 import wave
 import numpy as np
 

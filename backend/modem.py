@@ -1,5 +1,9 @@
 import numpy as np
 import scipy.signal
+import scipy.fft
+import datetime
+
+from .io_handler.audiosaver import AudioSaver
 
 SAMPLE_RATE = 48000 # Samples per secondmode
 BAUD_RATE = 300 # Symbols per second
@@ -7,18 +11,24 @@ SAMPLES_PER_SYMBOL = SAMPLE_RATE // BAUD_RATE # Samples per Symbol
 
 FREQUENCIES = (1200, 1500, 1800, 2100)
 
-# One "sync" symbols, then one symbol silence
+# One "sync" symbols, then three symbol silence
 def create_sync_signal() -> np.ndarray:
-    samples: np.ndarray = np.zeros(2 * SAMPLES_PER_SYMBOL)
-    for i in range(SAMPLES_PER_SYMBOL * 1, SAMPLES_PER_SYMBOL * 2):
-        samples[i] = np.sin(900 * 2 * np.pi * i / SAMPLE_RATE)
-        
+    samples: np.ndarray = np.zeros(4 * SAMPLES_PER_SYMBOL)
+    # "Sync" symbol is a frequency chirp from 0 -> 1200 
+    for i in range(0, SAMPLES_PER_SYMBOL * 2):
+        progress = i / (SAMPLES_PER_SYMBOL * 2) # Goes from 0 -> 1
+        samples[i] = np.sin(progress * 1200 * 2 * np.pi * i / SAMPLE_RATE)
+
     return samples
 
 def modulate(data_bytes: bytes) -> np.ndarray:
     data = np.array(list(data_bytes), dtype=np.uint8) 
+    data = np.concat((np.array([len(data_bytes)], dtype=np.uint8), data))
+
+    print(data)
 
     length: int = data.shape[0] * 4
+
     n_samples = np.ceil(length * SAMPLES_PER_SYMBOL)
     samples: np.ndarray = np.arange(n_samples)
 
@@ -39,19 +49,14 @@ def modulate(data_bytes: bytes) -> np.ndarray:
     samples = np.array([get_sample(sample_number) for sample_number in samples])
     sync_signal = create_sync_signal()
 
-    return np.concatenate((np.zeros(80), sync_signal, samples))
+    return np.concatenate((sync_signal, samples))
 
 def demodulate(audio: np.ndarray) -> bytes:
     # To get our starting index, we need to find the sync signal
     # We do this by convolving a sync signal over our received signal and finding the maximum
-
-    sync_signal = create_sync_signal()
-    convolved = scipy.signal.convolve(audio, sync_signal, mode='valid')
-    shift = np.argmax(abs(convolved)) - 161 + len(sync_signal) + 80
-
     window_size = 160
     SFT = scipy.signal.ShortTimeFFT(np.ones(window_size), hop=160, fs=SAMPLE_RATE)
-    Sx = SFT.stft(audio[shift:]) # frequency = n * sample_rate / window_size
+    Sx = SFT.stft(audio[80:]) # frequency = n * sample_rate / window_size
     # n = frequency / (sample_rate / window_size) = window_size * frequency / sample_rate
     data = []
     current_bit = 0
@@ -63,14 +68,37 @@ def demodulate(audio: np.ndarray) -> bytes:
 
         if symbol < 0 or symbol > 3:
             current_bit += 2
+            print(current_bit // 8)
             continue
 
         data[current_bit // 8] |= (symbol << (current_bit % 8))
         current_bit += 2
 
+    print(data)
     return bytes(data)
 
+def is_sync_signal(audio: np.ndarray) -> tuple[int, float]:
+    # window_size = 320
+    # frequency = 900
+    # sample_rate = 48000
+    # n = 320 * 900 / 48000 = 6
+    sync_signal = np.flip(create_sync_signal())
+    
+    amplitude = np.sum(audio * audio)
 
+    convolved = scipy.signal.convolve(audio, sync_signal)
+    max_index = np.argmax(convolved)
 
+    max_value = convolved[max_index]
 
+    shift = max_index - len(sync_signal)
+
+    if max_value > 1:
+        print(max_value)
+        print(f"calculated shift: {shift}")
+
+    if shift < 0:
+        shift = 0
+
+    return (int(shift), max_value)
 
