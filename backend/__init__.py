@@ -70,7 +70,6 @@ def demodulation_loop(stream: pyaudio.Stream):
             print("Overlap")
 
         if amplitude > 10:
-
             with AudioSaver("sync.wav") as s:
                 s.write(chunk)
 
@@ -87,6 +86,7 @@ def demodulation_loop(stream: pyaudio.Stream):
             s.write(chunk)
 
         length = demodulate(chunk)[0]
+        print(length)
 
         if length == 0: continue
 

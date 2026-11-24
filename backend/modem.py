@@ -1,17 +1,13 @@
-from os import wait
-
 import numpy as np
 import scipy.signal
-import scipy.fft
-import datetime
 
 from .io_handler.audiosaver import AudioSaver
 
 SAMPLE_RATE = 48000 # Samples per secondmode
-BAUD_RATE = 300 # Symbols per second
+BAUD_RATE = 1200 # Symbols per second
 SAMPLES_PER_SYMBOL = SAMPLE_RATE // BAUD_RATE # Samples per Symbol
 
-FREQUENCIES = (1200, 1500, 1800, 2100)
+FREQUENCIES = (BAUD_RATE, 2 * BAUD_RATE, 3 * BAUD_RATE, 4 * BAUD_RATE)
 
 # One "sync" symbols, then three symbol silence
 def create_sync_signal() -> np.ndarray:
@@ -54,14 +50,15 @@ def modulate(data_bytes: bytes) -> np.ndarray:
 def demodulate(audio: np.ndarray) -> bytes:
     # To get our starting index, we need to find the sync signal
     # We do this by convolving a sync signal over our received signal and finding the maximum
-    window_size = 160
-    SFT = scipy.signal.ShortTimeFFT(np.ones(window_size), hop=160, fs=SAMPLE_RATE)
-    Sx = SFT.stft(audio[80:]) # frequency = n * sample_rate / window_size
+    window_size = SAMPLES_PER_SYMBOL
+    SFT = scipy.signal.ShortTimeFFT(np.ones(window_size), hop=SAMPLES_PER_SYMBOL, fs=SAMPLE_RATE)
+    Sx = SFT.stft(audio[(SAMPLES_PER_SYMBOL//2):]) 
+    # frequency = n * sample_rate / window_size
     # n = frequency / (sample_rate / window_size) = window_size * frequency / sample_rate
     data = []
     current_bit = 0
     for i in range(0, Sx.shape[1]):
-        symbol = np.argmax(abs(Sx[...,i])) - 4
+        symbol = np.argmax(abs(Sx[...,i])) - 1
         
         if current_bit % 8 == 0:
             data.append(0)
