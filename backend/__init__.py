@@ -1,10 +1,9 @@
-from .io_handler import AudioSaver, AudioOpener
+from .io_handler import AudioInput, AudioOutput, AudioOpener, AudioSaver
 from .modem import demodulate, modulate, is_sync_signal, create_sync_signal
 from .modem import SAMPLES_PER_SYMBOL
 from queue import Queue
 import numpy as np
 import threading
-import pyaudio
 
 CHUNK = len(create_sync_signal())
 running = True
@@ -13,30 +12,11 @@ receiving = False
 mod_queue: Queue[bytes] = Queue()
 demod_queue: Queue[bytes] = Queue()
 
-def raw2float(audio: bytes) -> np.ndarray:
-    length = len(audio)
-    if length % 4 != 0:
-        raise ValueError("Audio must be 32-bit")
-
-    samples = []
-    for i in range(0, length // 4):
-        samples.append(int.from_bytes(audio[4*i:4*(i+1)], 'little', signed=True) / 2**32)
-
-    return np.array(samples)
-
-def float2raw(audio: np.ndarray) -> bytes:
-    raw = []
-    for sample in audio:
-        raw.extend(round(0.9 * 2**31 * sample).to_bytes(4, 'little', signed=True))
-
-    return bytes(raw)
-
 def mainloop(modulate: bool = True, demodulate: bool = True):
     global mod_queue, demod_queue
-    p = pyaudio.PyAudio()
 
-    out_stream = p.open(48000, 1, pyaudio.paInt32, output=True)
-    in_stream = p.open(48000, 1, pyaudio.paInt32, input=True)
+    out_stream = AudioSaver("signal.wav")
+    in_stream = AudioOpener("signal.wav")
 
     if modulate:
         mod_thread = threading.Thread(target=modulation_loop, args=[out_stream])
@@ -46,53 +26,41 @@ def mainloop(modulate: bool = True, demodulate: bool = True):
         demod_thread = threading.Thread(target=demodulation_loop, args=[in_stream])
         demod_thread.start()
 
-def modulation_loop(stream: pyaudio.Stream):
+def modulation_loop(stream: AudioOutput):
     global mod_queue
-    while running:
-        message = mod_queue.get()
-        modulated = modulate(message)
-        stream.write(float2raw(modulated))
+    with stream:
+        while running:
+            message = mod_queue.get()
+            modulated = modulate(message)
+            stream.write(modulated)
 
-def demodulation_loop(stream: pyaudio.Stream):
-    previous_chunk = np.zeros(CHUNK//2)
-    while running:
-        chunk = raw2float(stream.read(CHUNK//2))
+def demodulation_loop(stream: AudioInput):
+    with stream:
+        previous_chunk = np.zeros(CHUNK//2)
+        while running:
+            chunk = stream.read(CHUNK//2)
 
-        shift, amplitude, average = is_sync_signal(np.concat((previous_chunk, chunk)))
+            shift, amplitude, average = is_sync_signal(np.concat((previous_chunk, chunk)))
 
-        previous_chunk = chunk
+            previous_chunk = chunk
 
-        if amplitude > 3: 
-            print(average)
-            print("start_recv")
-            with AudioSaver("sync.wav") as s:
-                s.write(chunk)
+            if amplitude > 3: 
+                _empty = stream.read(shift) # Read enough bytes to receive the last of the message
 
-            test = stream.read(shift) # Read enough bytes to receive the last of the message
-            with AudioSaver("empty.wav") as s:
-                s.write(raw2float(test))
+            else:
+                continue
 
-        else:
-            continue
+            chunk = stream.read(2 * 4 * SAMPLES_PER_SYMBOL)
 
-        chunk = raw2float(stream.read(4 * SAMPLES_PER_SYMBOL))
+            length = int.from_bytes(demodulate(chunk), 'little')
 
-        with AudioSaver("length.wav") as s:
-            s.write(chunk)
+            if length == 0: 
+                continue
 
-        length = demodulate(chunk)[0]
+            chunk = stream.read(CHUNK * length)
 
-        print(f"length = {length}")
-        if length == 0: 
-            continue
-
-        chunk = raw2float(stream.read(CHUNK * length))
-
-        with AudioSaver("dataAudio.wav") as s:
-            s.write(chunk)
-
-        message = demodulate(chunk)
-        demod_queue.put(message)
-        print(message.decode('utf-8', errors='ignore'))
-        print("Listening...")
+            message = demodulate(chunk)
+            demod_queue.put(message)
+            print(message)
+            print("Listening...")
 

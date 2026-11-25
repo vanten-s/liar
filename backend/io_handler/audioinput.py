@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from typing import Self
+import numpy as np
 
 class AudioInput:
     @abstractmethod
@@ -11,6 +12,6 @@ class AudioInput:
         pass
 
     @abstractmethod
-    def read(self) -> bytes:
+    def read(self, num_samples: int) -> np.ndarray:
         pass
 

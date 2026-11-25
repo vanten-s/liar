@@ -27,7 +27,8 @@ def create_sync_signal() -> np.ndarray:
 
 def modulate(data_bytes: bytes) -> np.ndarray:
     data = np.array(list(data_bytes), dtype=np.uint8) 
-    data = np.concat((np.array([len(data_bytes)], dtype=np.uint8), data))
+    length_enoded = np.array(list(len(data_bytes).to_bytes(2, 'little')), dtype=np.uint8)
+    data = np.concat((length_enoded, data))
 
     length: int = data.shape[0] * 4
 

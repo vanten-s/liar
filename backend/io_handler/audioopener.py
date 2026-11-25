@@ -3,15 +3,15 @@ import wave
 import numpy as np
 
 class AudioOpener(AudioInput):
-    def __init__(self):
-        pass
+    def __init__(self, filename: str):
+        self.filename = filename
 
     def __enter__(self):
-        self.wf = wave.open("audio.wav", mode="rb")
+        self.wf = wave.open(self.filename, mode="rb")
         return self
 
-    def read(self) -> np.ndarray:
-        frames = self.wf.readframes(self.wf.getnframes())
+    def read(self, num_samples: int) -> np.ndarray:
+        frames = self.wf.readframes(num_samples)
         width = self.wf.getsampwidth()
         samples = []
         for i in range(0, len(frames), width):
