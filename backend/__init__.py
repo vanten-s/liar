@@ -1,4 +1,4 @@
-from .io_handler import AudioInput, AudioOutput, AudioOpener, AudioSaver
+from .io_handler import AudioInput, AudioOutput, AudioOpener, AudioSaver, AudioPlayer, AudioListener
 from .modem import demodulate, modulate, is_sync_signal, create_sync_signal
 from .modem import SAMPLES_PER_SYMBOL
 from queue import Queue
@@ -15,8 +15,11 @@ demod_queue: Queue[bytes] = Queue()
 def mainloop(modulate: bool = True, demodulate: bool = True):
     global mod_queue, demod_queue
 
-    out_stream = AudioSaver("signal.wav")
-    in_stream = AudioOpener("signal.wav")
+    # out_stream = AudioSaver("signal.wav")
+    # in_stream = AudioOpener("signal.wav")
+
+    out_stream = AudioPlayer()
+    in_stream = AudioListener()
 
     if modulate:
         mod_thread = threading.Thread(target=modulation_loop, args=[out_stream])
@@ -57,7 +60,7 @@ def demodulation_loop(stream: AudioInput):
             if length == 0: 
                 continue
 
-            chunk = stream.read(CHUNK * length)
+            chunk = stream.read(length * 4 * SAMPLES_PER_SYMBOL)
 
             message = demodulate(chunk)
             demod_queue.put(message)

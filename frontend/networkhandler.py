@@ -1,4 +1,5 @@
-from scapy.all import Ether, TunTapInterface, get_if_hwaddr
+from scapy.all import Ether, get_if_hwaddr
+from scapy.layers.tuntap import TunTapInterface
 import socket
 import fcntl
 import struct
@@ -26,7 +27,7 @@ class NetworkHandler:
     def __init__(self, name="RFtap0"):
         self.name = name
 
-        self.tap = TunTapInterface(name, mode_tun=False)
+        self.tap: TunTapInterface = TunTapInterface(name, mode_tun=False)
 
         time.sleep(1) # hack interface tar tid att registrera TODO: hitta lösning
         bring_interface_up(self.name)

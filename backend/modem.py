@@ -5,8 +5,8 @@ import scipy.signal
 from .io_handler.audiosaver import AudioSaver
 
 SAMPLE_RATE = 48000 # Samples per secondmode
-BAUD_RATE = 300 # Symbols per second
-FREQUENCY_SHIFT =  4
+BAUD_RATE = 1200 # Symbols per second
+FREQUENCY_SHIFT =  2
 SAMPLES_PER_SYMBOL = SAMPLE_RATE // BAUD_RATE # Samples per Symbol
 
 def frequency(symbol: int) -> float:
